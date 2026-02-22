@@ -1,0 +1,39 @@
+:root{
+  --bg:#f7f8fb;
+  --card:#ffffff;
+  --accent:#2b6cb0;
+  --muted:#666;
+  --border:#e2e8f0;
+}
+*{box-sizing:border-box}
+body{
+  font-family:Inter,Segoe UI,Arial,Helvetica,sans-serif;
+  background:var(--bg);
+  color:#111;
+  margin:0;
+  padding:24px;
+}
+.container{max-width:1100px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+header h1{font-size:20px;margin:0;color:var(--accent)}
+nav a{margin-left:10px;color:var(--accent);text-decoration:none}
+nav a:hover{text-decoration:underline}
+main{background:var(--card);padding:18px;border-radius:8px;border:1px solid var(--border)}
+form input[type=text], form input[type=password], form input[name=start], form input[name=end]{padding:8px;border:1px solid var(--border);border-radius:4px}
+input[type=file]{padding:6px}
+button{background:var(--accent);color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer}
+button:hover{opacity:0.95}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{border:1px solid var(--border);padding:10px;text-align:left}
+th{background:#f1f5f9;color:var(--muted)}
+pre{background:#0f1724;color:#e6eef8;padding:12px;border-radius:6px;overflow:auto}
+ul{padding-left:18px}
+.flash{background:#fff3cd;border:1px solid #ffeeba;padding:10px;border-radius:6px;margin-bottom:12px}
+.meta{font-size:13px;color:var(--muted)}
+
+/* responsive */
+@media (max-width:640px){
+  body{padding:12px}
+  header{flex-direction:column;align-items:flex-start}
+  nav{margin-top:8px}
+}

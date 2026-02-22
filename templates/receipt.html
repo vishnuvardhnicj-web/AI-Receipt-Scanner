@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Receipt Details</h2>
+  <p><a href="{{ url_for('index') }}">← Back to list</a></p>
+  <table>
+    <tr><th>ID</th><td>{{ receipt.id }}</td></tr>
+    <tr><th>Date</th><td>{{ receipt.date }}</td></tr>
+    <tr><th>Total</th><td>{{ receipt.total }}</td></tr>
+    <tr><th>Category</th><td>{{ receipt.bill_category }}</td></tr>
+    <tr><th>Filename</th><td>{{ receipt.filename }}</td></tr>
+    <tr><th>Uploaded</th><td>{{ receipt.created_at }}</td></tr>
+  </table>
+
+  <h3>Raw OCR Text</h3>
+  <pre>{{ receipt.raw_text or "[No text extracted]" }}</pre>
+
+  <form method="post" action="{{ url_for('delete_receipt', rid=receipt.id) }}" onsubmit="return confirm('Delete this receipt?');">
+    <button type="submit" style="background:#c22; color:white; padding:8px 16px; border:none; cursor:pointer;">Delete Receipt</button>
+  </form>
+{% endblock %}

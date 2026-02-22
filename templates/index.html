@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Your Receipts</h2>
+  <form method="post" action="{{ url_for('reprocess_route') }}" style="display:inline; margin-right:12px;">
+    <button type="submit">Reprocess all receipts</button>
+  </form>
+  <form method="get" action="{{ url_for('export') }}">
+    <label>Start (YYYY-MM-DD) <input name="start"></label>
+    <label>End (YYYY-MM-DD) <input name="end"></label>
+    <button type="submit">Export CSV</button>
+  </form>
+  <p><a href="{{ url_for('upload') }}">Upload new receipt</a></p>
+  {% if receipts %}
+    <table>
+      <thead><tr><th>ID</th><th>Date</th><th>Total</th><th>Category</th><th>Uploaded</th><th>View</th></tr></thead>
+      <tbody>
+      {% for r in receipts %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td>{{ r.date }}</td>
+          <td>{{ r.total }}</td>
+          <td>{{ r.bill_category }}</td>
+          <td>{{ r.created_at }}</td>
+          <td>
+            <a href="{{ url_for('receipt_view', rid=r.id) }}">View</a>
+            <form method="post" action="{{ url_for('delete_receipt', rid=r.id) }}" style="display:inline;margin-left:8px" onsubmit="return confirm('Delete this receipt?');">
+              <button type="submit" style="background:none;border:none;color:#c22;cursor:pointer;padding:0">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No receipts yet.</p>
+  {% endif %}
+{% endblock %}
