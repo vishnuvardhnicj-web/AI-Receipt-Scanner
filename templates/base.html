@@ -13,7 +13,6 @@
         {% if user %}
           <span>Hi, {{ user.username }}</span>
           <a href="{{ url_for('index') }}">Home</a>
-          <a href="{{ url_for('upload') }}">Upload</a>
           <a href="{{ url_for('logout') }}">Logout</a>
         {% else %}
           <a href="{{ url_for('login') }}">Login</a>
@@ -22,16 +21,18 @@
       </nav>
     </header>
     <hr>
-    {% with messages = get_flashed_messages() %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        <ul>
-          {% for m in messages %}
-            <li>{{ m }}</li>
-          {% endfor %}
-        </ul>
+        {% for category, msg in messages %}
+          <div class="flash {{ category }}">{{ msg }}</div>
+        {% endfor %}
       {% endif %}
     {% endwith %}
 
-    {% block content %}{% endblock %}
+    <div class="container">
+      <main>
+        {% block content %}{% endblock %}
+      </main>
+    </div>
   </body>
 </html>

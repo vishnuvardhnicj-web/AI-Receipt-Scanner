@@ -1,8 +1,17 @@
 {% extends 'base.html' %}
 {% block content %}
   <h2>Upload Receipt</h2>
-  <form method="post" enctype="multipart/form-data">
-    <input type="file" name="file" accept="image/*,.pdf"><br><br>
-    <button type="submit">Upload</button>
+  <form method="post" enctype="multipart/form-data" class="form-card">
+    <div class="form-group">
+      <label>Receipt file:
+        <input type="file" name="file" accept="image/*,.pdf" required>
+      </label>
+    </div>
+    <div class="form-group">
+      <label>Date (optional):
+        <input type="date" name="date">
+      </label>
+    </div>
+    <button type="submit" class="btn btn-submit">Upload</button>
   </form>
 {% endblock %}

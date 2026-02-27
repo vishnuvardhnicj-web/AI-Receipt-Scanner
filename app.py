@@ -85,6 +85,33 @@ def current_user():
     return User.query.get(uid)
 
 
+# helpers
+@app.template_filter('display_date')
+def display_date(value):
+    """Format a date or datetime for UI (e.g. Feb 27, 2026)."""
+    if not value:
+        return ""
+    if isinstance(value, str):
+        # try common formats: ISO, YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY
+        for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%Y/%m/%d'):
+            try:
+                dt = datetime.strptime(value, fmt)
+                break
+            except Exception:
+                dt = None
+        if dt is None:
+            try:
+                dt = datetime.fromisoformat(value)
+            except Exception:
+                return value
+    else:
+        dt = value
+    try:
+        return dt.strftime('%b %d, %Y')
+    except Exception:
+        return str(value)
+
+
 def detect_bill_category(text: str) -> str:
     """Detect bill category from OCR text."""
     text_lower = text.lower()
@@ -259,7 +286,8 @@ def index():
     user = current_user()
     if not user:
         return redirect(url_for("login"))
-    receipts = Receipt.query.filter_by(user_id=user.id).order_by(Receipt.created_at.desc()).all()
+    # show receipts in ascending order by id (older first) so the ID column is increasing
+    receipts = Receipt.query.filter_by(user_id=user.id).order_by(Receipt.id.asc()).all()
     return render_template("index.html", receipts=receipts, user=user)
 
 
@@ -269,15 +297,15 @@ def register():
         username = request.form["username"].strip()
         password = request.form["password"]
         if not username or not password:
-            flash("Username and password required")
+            flash("Username and password required", "error")
             return redirect(url_for("register"))
         if User.query.filter_by(username=username).first():
-            flash("Username already exists")
+            flash("Username already exists", "error")
             return redirect(url_for("register"))
         user = User(username=username, password_hash=generate_password_hash(password))
         db.session.add(user)
         db.session.commit()
-        flash("Registered — please log in")
+        flash("Registered — please log in", "success")
         return redirect(url_for("login"))
     return render_template("register.html")
 
@@ -289,7 +317,7 @@ def login():
         password = request.form["password"]
         user = User.query.filter_by(username=username).first()
         if not user or not check_password_hash(user.password_hash, password):
-            flash("Invalid credentials")
+            flash("Invalid credentials", "error")
             return redirect(url_for("login"))
         session["user_id"] = user.id
         return redirect(url_for("index"))
@@ -310,7 +338,7 @@ def upload():
     if request.method == "POST":
         f = request.files.get("file")
         if not f:
-            flash("No file uploaded")
+            flash("No file uploaded", "error")
             return redirect(url_for("upload"))
         filename = secure_filename(f.filename)
         dest = Path(app.config["UPLOAD_FOLDER"]) / filename
@@ -320,15 +348,20 @@ def upload():
             text = ocr_path(dest)
         except Exception as e:
             text = f"[OCR ERROR: {type(e).__name__}: {e}]"
-            flash("OCR processing error: see receipt details for message.")
+            flash("OCR processing error: see receipt details for message.", "error")
 
         if not text.strip():
             if not EASYOCR_OK:
-                flash("No OCR engine available (EasyOCR). Install and restart.")
+                flash("No OCR engine available (EasyOCR). Install and restart.", "error")
             else:
-                flash("OCR produced no text — try reprocessing or upload a clearer image.")
+                flash("OCR produced no text — try reprocessing or upload a clearer image.", "warning")
 
         fields = extract_fields(text)
+        # allow manual date override from form
+        manual_date = request.form.get("date")
+        if manual_date:
+            # store in ISO format (YYYY-MM-DD); browser date input gives this
+            fields["date"] = manual_date
 
         receipt = Receipt(
             user_id=user.id,
@@ -340,7 +373,7 @@ def upload():
         )
         db.session.add(receipt)
         db.session.commit()
-        flash("Uploaded and processed")
+        flash("Uploaded and processed", "success")
         return redirect(url_for("index"))
     return render_template("upload.html")
 
@@ -378,10 +411,35 @@ def export():
     if end:
         try:
             dt = datetime.fromisoformat(end)
+            # If the end value was supplied as a date (YYYY-MM-DD) from a date picker,
+            # adjust to the end of that day so receipts on that date are included.
+            if isinstance(end, str) and len(end) <= 10:
+                dt = dt.replace(hour=23, minute=59, second=59, microsecond=999999)
             q = q.filter(Receipt.created_at <= dt)
         except ValueError:
             pass
     items = q.order_by(Receipt.created_at.desc()).all()
+
+    def parse_amount(s: str) -> float:
+        if not s:
+            return 0.0
+        s = s.strip()
+        # keep digits, dot, comma and minus
+        s = re.sub(r"[^0-9,\.\-]", "", s)
+        # If there are commas but no dots, treat comma as decimal separator (e.g. "12,34")
+        if s.count(',') > 0 and s.count('.') == 0:
+            if s.count(',') > 1:
+                s = s.replace(',', '')
+            else:
+                s = s.replace(',', '.')
+        else:
+            s = s.replace(',', '')
+        try:
+            return float(s)
+        except Exception:
+            return 0.0
+
+    total_sum = sum(parse_amount(r.total) for r in items)
 
     def stream_csv():
         header = ",".join(["id", "date", "total", "bill_category", "filename", "created_at"]) + "\n"
@@ -389,6 +447,9 @@ def export():
         for r in items:
             row = [str(r.id), (r.date or ""), (r.total or ""), (r.bill_category or ""), (r.filename or ""), r.created_at.isoformat()]
             yield ",".join([v.replace(",", " ") for v in row]) + "\n"
+        # Append a final total row summing all receipt totals
+        total_row = ["", "", f"{total_sum:.2f}", "TOTAL", "", ""]
+        yield ",".join([v.replace(",", " ") for v in total_row]) + "\n"
 
     return Response(stream_csv(), mimetype="text/csv", headers={"Content-Disposition": "attachment; filename=receipts.csv"})
 
@@ -409,7 +470,49 @@ def reprocess_route():
             print('Reprocess error', e)
 
     threading.Thread(target=_worker, daemon=True).start()
-    flash('Reprocessing started in background — refresh later to see updates.')
+    flash('Reprocessing started in background — refresh later to see updates.', "info")
+    return redirect(url_for('index'))
+
+
+@app.route('/reprocess/<int:rid>', methods=['POST'])
+def reprocess_receipt(rid):
+    user = current_user()
+    if not user:
+        return redirect(url_for('login'))
+    r = Receipt.query.get_or_404(rid)
+    if r.user_id != user.id:
+        return "Forbidden", 403
+
+    # Re-run OCR and extraction for this single receipt
+    try:
+        search_dirs = [Path(app.config["UPLOAD_FOLDER"]), Path.home() / "Downloads", Path.home() / "Desktop", Path.home() / "Documents", Path.home() / "Pictures"]
+        found = None
+        for d in search_dirs:
+            p = Path(d) / r.filename
+            if p.exists():
+                found = p
+                break
+        if not found:
+            for dirpath, dirnames, filenames in os.walk(str(Path.home())):
+                if r.filename in filenames:
+                    found = Path(dirpath) / r.filename
+                    break
+        if found:
+            text = ocr_path(found)
+            if text:
+                fields = extract_fields(text)
+                r.raw_text = fields.get('raw_text')
+                r.total = fields.get('total')
+                r.bill_category = fields.get('bill_category')
+                # Note: date is NOT overwritten; user already set it manually
+                db.session.commit()
+                flash(f'Receipt #{r.id} reprocessed successfully', "success")
+            else:
+                flash(f'OCR produced no text for receipt #{r.id}', "warning")
+        else:
+            flash(f'Receipt file not found', "error")
+    except Exception as e:
+        flash(f'Reprocess error: {e}', "error")
     return redirect(url_for('index'))
 
 
@@ -429,7 +532,7 @@ def delete_receipt(rid):
         pass
     db.session.delete(r)
     db.session.commit()
-    flash('Receipt deleted')
+    flash('Receipt deleted', "success")
     return redirect(url_for('index'))
 
 

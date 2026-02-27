@@ -41,6 +41,10 @@ Export
 
 Use the export form on the home page or visit `/export?start=2023-01-01&end=2023-12-31` to download a CSV for a date range.
 
+Upload
+
+When uploading a receipt you can optionally provide the date manually; OCR extraction will still run but any date you enter will be stored instead of the guessed value.
+
 Notes
 
 - This is a minimal demo. For production, secure sessions, add file validation, and harden OCR handling.

@@ -1,30 +1,107 @@
 {% extends 'base.html' %}
 {% block content %}
   <h2>Your Receipts</h2>
-  <form method="post" action="{{ url_for('reprocess_route') }}" style="display:inline; margin-right:12px;">
-    <button type="submit">Reprocess all receipts</button>
-  </form>
-  <form method="get" action="{{ url_for('export') }}">
-    <label>Start (YYYY-MM-DD) <input name="start"></label>
-    <label>End (YYYY-MM-DD) <input name="end"></label>
-    <button type="submit">Export CSV</button>
-  </form>
-  <p><a href="{{ url_for('upload') }}">Upload new receipt</a></p>
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+    </div>
+
+    <div class="toolbar-right">
+      <a href="{{ url_for('upload') }}" class="btn btn-upload">+ Upload new receipt</a>
+      <button id="export-btn" class="btn btn-export">📅 Export</button>
+    </div>
+  </div>
+
+  <!-- Export Modal -->
+  <div id="export-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Export by Date Range</h2>
+        <span class="modal-close" id="modal-close">&times;</span>
+      </div>
+      <form method="get" action="{{ url_for('export') }}" id="export-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="start-date">Start Date</label>
+            <input type="date" id="start-date" name="start" class="date-input" placeholder="dd/mm/yyyy">
+          </div>
+          <div class="form-group">
+            <label for="end-date">End Date</label>
+            <input type="date" id="end-date" name="end" class="date-input" placeholder="dd/mm/yyyy">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-cancel" id="modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-submit">Export</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      const modal = document.getElementById('export-modal');
+      const exportBtn = document.getElementById('export-btn');
+      const closeBtn = document.getElementById('modal-close');
+      const cancelBtn = document.getElementById('modal-cancel');
+      const form = document.getElementById('export-form');
+      const startInput = document.getElementById('start-date');
+      const endInput = document.getElementById('end-date');
+
+      // Open modal
+      exportBtn.addEventListener('click', function(){
+        modal.style.display = 'block';
+      });
+
+      // Close modal
+      function closeModal(){
+        modal.style.display = 'none';
+      }
+      closeBtn.addEventListener('click', closeModal);
+      cancelBtn.addEventListener('click', closeModal);
+
+      // Close modal when clicking outside
+      window.addEventListener('click', function(e){
+        if (e.target === modal) {
+          closeModal();
+        }
+      });
+
+      // Form submission
+      form.addEventListener('submit', function(e){
+        if (!startInput.value || !endInput.value) {
+          e.preventDefault();
+          alert('Please select both start and end dates');
+        } else if (startInput.value > endInput.value) {
+          e.preventDefault();
+          alert('Start date must be before end date');
+        } else {
+          // Close modal after a short delay to allow form submission
+          setTimeout(closeModal, 500);
+        }
+      });
+    });
+  </script>
+  
   {% if receipts %}
     <table>
-      <thead><tr><th>ID</th><th>Date</th><th>Total</th><th>Category</th><th>Uploaded</th><th>View</th></tr></thead>
+      <thead><tr><th>#</th><th>Date</th><th>Total</th><th>Category</th><th>Filename</th><th>Uploaded</th><th>View</th></tr></thead>
       <tbody>
       {% for r in receipts %}
         <tr>
-          <td>{{ r.id }}</td>
-          <td>{{ r.date }}</td>
+          <td>{{ loop.index }}</td>
+          <td>{{ r.date|display_date }}</td>
           <td>{{ r.total }}</td>
           <td>{{ r.bill_category }}</td>
-          <td>{{ r.created_at }}</td>
-          <td>
-            <a href="{{ url_for('receipt_view', rid=r.id) }}">View</a>
-            <form method="post" action="{{ url_for('delete_receipt', rid=r.id) }}" style="display:inline;margin-left:8px" onsubmit="return confirm('Delete this receipt?');">
-              <button type="submit" style="background:none;border:none;color:#c22;cursor:pointer;padding:0">Delete</button>
+          <td>{{ r.filename }}</td>
+          <td>{{ r.created_at|display_date }}</td>
+          <td class="actions-cell">
+            <a href="{{ url_for('receipt_view', rid=r.id) }}" class="action-link">View</a>
+            <form method="post" action="{{ url_for('reprocess_receipt', rid=r.id) }}" style="display:inline" onsubmit="return confirm('Reprocess this receipt?');">
+              <button type="submit" class="action-btn">Reprocess</button>
+            </form>
+            <form method="post" action="{{ url_for('delete_receipt', rid=r.id) }}" style="display:inline" onsubmit="return confirm('Delete this receipt?');">
+              <button type="submit" class="action-btn delete-btn">Delete</button>
             </form>
           </td>
         </tr>

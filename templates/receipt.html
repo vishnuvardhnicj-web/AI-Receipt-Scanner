@@ -2,7 +2,25 @@
 {% block content %}
   <h2>Receipt Details</h2>
   <p><a href="{{ url_for('index') }}">← Back to list</a></p>
-  <table>
+  
+  <h3>Uploaded Bill</h3>
+  {% if receipt.filename %}
+    {% set ext = receipt.filename.split('.')[-1].lower() %}
+    {% if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp'] %}
+      <div style="border:1px solid var(--border);padding:12px;border-radius:6px;max-width:600px">
+        <img src="{{ url_for('uploaded_file', filename=receipt.filename) }}" alt="Receipt image" style="max-width:100%;height:auto;border-radius:4px">
+      </div>
+    {% elif ext == 'pdf' %}
+      <p><a href="{{ url_for('uploaded_file', filename=receipt.filename) }}" class="btn" target="_blank">📄 View PDF</a></p>
+    {% else %}
+      <p><a href="{{ url_for('uploaded_file', filename=receipt.filename) }}" class="btn" target="_blank">📥 Download file</a></p>
+    {% endif %}
+  {% else %}
+    <p><em>No file uploaded</em></p>
+  {% endif %}
+
+  <h3>Receipt Information</h3>
+  <table class="details-table">
     <tr><th>ID</th><td>{{ receipt.id }}</td></tr>
     <tr><th>Date</th><td>{{ receipt.date }}</td></tr>
     <tr><th>Total</th><td>{{ receipt.total }}</td></tr>
@@ -15,6 +33,6 @@
   <pre>{{ receipt.raw_text or "[No text extracted]" }}</pre>
 
   <form method="post" action="{{ url_for('delete_receipt', rid=receipt.id) }}" onsubmit="return confirm('Delete this receipt?');">
-    <button type="submit" style="background:#c22; color:white; padding:8px 16px; border:none; cursor:pointer;">Delete Receipt</button>
+    <button type="submit" class="btn" style="background:#c22; color:white;">Delete Receipt</button>
   </form>
 {% endblock %}
