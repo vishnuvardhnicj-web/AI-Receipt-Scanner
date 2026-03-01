@@ -1,6 +1,6 @@
-# AI Receipt Scanner
+# SENSE BILL - AI Receipt Scanner
 
-A Flask-based web application that allows users to upload receipt images, automatically extract key information using OCR (Optical Character Recognition), store the data in SQLite, and export records as CSV files.
+A Flask-based web application that allows users to upload receipt images, automatically extract key information using OCR (Optical Character Recognition)s, store the data in SQLite, and export records as CSV files.
 
 ## Table of Contents
 - [Features](#features)
