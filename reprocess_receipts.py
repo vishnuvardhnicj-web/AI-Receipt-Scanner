@@ -96,13 +96,16 @@ def main():
             # total: prefer extracted, fallback to 'amount' or last decimal number
             total_val = fields.get('total') or ''
             if not total_val:
-                m = re.search(r"(?:total|amount due|amount|grand total)[:\s]*([0-9,]+[.,][0-9]{2})", use_text, flags=re.IGNORECASE)
+                m = re.search(r"(?:total|amount due|amount|grand total)[:\s]*([0-9]{1,3}(?:,[0-9]{3})*[.,][0-9]{2})", use_text, flags=re.IGNORECASE)
                 if m:
                     total_val = m.group(1)
                 else:
-                    m2 = re.findall(r"([0-9]+[.,][0-9]{2})", use_text)
+                    m2 = re.findall(r"([0-9]{1,3}(?:,[0-9]{3})*[.,][0-9]{2})", use_text)
                     if m2:
-                        total_val = m2[-1]
+                        total_val = max(m2, key=lambda s: len(s.replace(",", "")))
+            # normalize before saving
+            if total_val:
+                total_val = total_val.replace(",", "")
             if (r.total or '') != (total_val or ''):
                 r.total = total_val
                 changed = True

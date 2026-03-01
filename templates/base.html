@@ -3,12 +3,19 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AI Receipt Scanner</title>
+    <title>SENSE BILL - AI Receipt Scanner</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+      /* global loader overlay */
+      #loader-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.7);z-index:2000}
+      #loader-overlay .spinner{position:absolute;top:50%;left:50%;width:60px;height:60px;margin:-30px 0 0 -30px;border:8px solid #f3f3f3;border-top:8px solid var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+      @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+    </style>
   </head>
   <body>
+    <div id="loader-overlay"><div class="spinner"></div></div>
     <header>
-      <h1>AI Receipt Scanner</h1>
+      <h1>SENSE BILL - AI Receipt Scanner</h1>
       <nav>
         {% if user %}
           <span>Hi, {{ user.username }}</span>
@@ -34,5 +41,17 @@
         {% block content %}{% endblock %}
       </main>
     </div>
+    <script>
+      // show loader on any form submission, disable submit button
+      document.addEventListener('DOMContentLoaded', function(){
+        document.querySelectorAll('form').forEach(function(f){
+          f.addEventListener('submit', function(e){
+            var btn = f.querySelector('button[type=submit]');
+            if(btn) btn.disabled = true;
+            document.getElementById('loader-overlay').style.display = 'block';
+          });
+        });
+      });
+    </script>
   </body>
 </html>

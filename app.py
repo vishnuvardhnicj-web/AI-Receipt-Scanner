@@ -146,19 +146,25 @@ def extract_fields(text: str):
             date = m.group(1)
             break
 
-    # total amount
+    # total amount (allow thousands separators like 1,234.56)
     total = ""
-    m = re.search(r"([€£$]\s*[0-9]+[.,][0-9]{2})", text)
+    m = re.search(r"([€£$]\s*[0-9]{1,3}(?:,[0-9]{3})*[.,][0-9]{2})", text)
     if m:
         total = m.group(1)
     if not total:
-        m = re.search(r"(?:total|amount due|amount)[:\s]*([0-9,]+[.,][0-9]{2})", text, flags=re.IGNORECASE)
+        # try common keywords
+        m = re.search(r"(?:total|amount due|amount)[:\s]*([0-9]{1,3}(?:,[0-9]{3})*[.,][0-9]{2})", text, flags=re.IGNORECASE)
         if m:
             total = m.group(1)
     if not total:
-        m2 = re.findall(r"([0-9]+[.,][0-9]{2})", text)
+        # fallback: grab any decimal-like number, prefer the longest match (likely the total)
+        m2 = re.findall(r"([0-9]{1,3}(?:,[0-9]{3})*[.,][0-9]{2})", text)
         if m2:
-            total = m2[-1]
+            # choose the entry with the most digits (ignore commas) to avoid "1,13" over "9.00"
+            total = max(m2, key=lambda s: len(s.replace(",", "")))
+    # normalize by stripping commas so storage/display is consistent
+    if total:
+        total = total.replace(",", "")
 
     bill_category = detect_bill_category(text)
 
